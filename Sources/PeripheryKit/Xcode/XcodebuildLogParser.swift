@@ -22,7 +22,7 @@ final class XcodebuildLogParser {
 
                 if let swiftCommand = swiftCommand,
                     swiftCommand.contains("-module-name \(sanitizedModuleName) ") {
-                    return parseSwiftcInvocation(command: swiftCommand.trimmed)
+                    return try parseSwiftcInvocation(command: swiftCommand.trimmed)
                 }
             }
         }
@@ -50,8 +50,8 @@ final class XcodebuildLogParser {
 
     // MARK: - Private
 
-    private func parseSwiftcInvocation(command: String) -> SwiftcInvocation {
-        let pattern = try! NSRegularExpression(pattern: " (-.+?)(?= -|$)", options: []) // swiftlint:disable:this force_try
+    private func parseSwiftcInvocation(command: String) throws -> SwiftcInvocation {
+        let pattern = try! NSRegularExpression(pattern: "(@.+?|-.+?)(?= -|@|$)", options: []) // swiftlint:disable:this force_try
         let matches = pattern.matches(in: command, options: [], range: NSRange(command.startIndex..., in: command))
         var arguments: [BuildArgument] = matches.map {
             let range = $0.range(at: 1)
@@ -63,23 +63,29 @@ final class XcodebuildLogParser {
 
         var files: [String] = []
 
-        // These arguments also contain a list of files to compile, we need to remove them.
-        // This may change in the future, but for now they always immediately follow the -j or -num-threads flags.
-        if let jobArgumentIndex = arguments.firstIndex(where: { $0.key.hasPrefix("-j") }) {
-            var jobArgument = arguments[jobArgumentIndex]
-            arguments.remove(at: jobArgumentIndex)
-            files += parseFileList(jobArgument.value)
-            jobArgument.value = nil
-            arguments.insert(jobArgument, at: jobArgumentIndex)
-        }
+        if let fileListArg = arguments.first(where: { $0.key.hasPrefix("@") && $0.key.hasSuffix(".SwiftFileList") }) {
+            let path = String(fileListArg.key.dropFirst())
+            let contents = try Path(path).read(.utf8)
+            files = contents.split(separator: "\n").map { String($0) }
+        } else {
+            // These arguments also contain a list of files to compile, we need to remove them.
+            // This may change in the future, but for now they always immediately follow the -j or -num-threads flags.
+            if let jobArgumentIndex = arguments.firstIndex(where: { $0.key.hasPrefix("-j") }) {
+                var jobArgument = arguments[jobArgumentIndex]
+                arguments.remove(at: jobArgumentIndex)
+                files += parseFileList(jobArgument.value)
+                jobArgument.value = nil
+                arguments.insert(jobArgument, at: jobArgumentIndex)
+            }
 
-        if let threadsArgumentIndex = arguments.firstIndex(where: { $0.key == "-num-threads" }) {
-            var threadsArgument = arguments[threadsArgumentIndex]
-            arguments.remove(at: threadsArgumentIndex)
-            let parts = threadsArgument.value?.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true).map { String($0) } ?? []
-            files += parseFileList(parts.last)
-            threadsArgument.value = parts.first
-            arguments.insert(threadsArgument, at: threadsArgumentIndex)
+            if let threadsArgumentIndex = arguments.firstIndex(where: { $0.key == "-num-threads" }) {
+                var threadsArgument = arguments[threadsArgumentIndex]
+                arguments.remove(at: threadsArgumentIndex)
+                let parts = threadsArgument.value?.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true).map { String($0) } ?? []
+                files += parseFileList(parts.last)
+                threadsArgument.value = parts.first
+                arguments.insert(threadsArgument, at: threadsArgumentIndex)
+            }
         }
 
         return SwiftcInvocation(arguments: arguments, files: files)
