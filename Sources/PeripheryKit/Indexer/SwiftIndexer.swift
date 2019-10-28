@@ -112,7 +112,7 @@ final class SwiftIndexer: TypeIndexer {
         }
 
         let info = try sourceKit.cursorInfo(file: function.location.file,
-                                            offset: offset)
+                                            offset: Int64(offset))
 
         guard let rawKind = info[SourceKit.Key.kind.rawValue] as? String,
             let usr = info[SourceKit.Key.usr.rawValue] as? String
@@ -226,8 +226,8 @@ final class SwiftIndexer: TypeIndexer {
 
     private func build(kind: Declaration.Kind, entity: [String: Any], structures: [[String: Any]]?, file: SourceFile) throws -> (declaration: Declaration, substructures: [[String: Any]]) {
         guard let usr = entity[SourceKit.Key.usr.rawValue] as? String,
-            let line = entity[SourceKit.Key.line.rawValue] as? Int64,
-            let column = entity[SourceKit.Key.column.rawValue] as? Int64 else {
+            let line = entity[SourceKit.Key.line.rawValue] as? Int,
+            let column = entity[SourceKit.Key.column.rawValue] as? Int else {
                 throw PeripheryKitError.swiftIndexingError(message: "Failed to parse declaration entity: \(entity)")
         }
 
@@ -275,8 +275,8 @@ final class SwiftIndexer: TypeIndexer {
             throw PeripheryKitError.swiftIndexingError(message: "Failed to parse reference entity: \(entity)")
         }
 
-        var line = entity[SourceKit.Key.line.rawValue] as? Int64
-        var column = entity[SourceKit.Key.column.rawValue] as? Int64
+        var line = entity[SourceKit.Key.line.rawValue] as? Int
+        var column = entity[SourceKit.Key.column.rawValue] as? Int
 
         if let parent = parent {
             // Some related references do not have a line or column, therefore we use those from

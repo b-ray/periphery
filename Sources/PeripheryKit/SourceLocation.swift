@@ -2,14 +2,14 @@ import Foundation
 
 public struct SourceLocation {
     let file: SourceFile
-    let line: Int64?
-    let column: Int64?
-    let offset: Int64?
+    let line: Int?
+    let column: Int?
+    let offset: Int?
 
     private var descriptionInternal: String = ""
     private var shortDescriptionInternal: String = ""
 
-    init(file: SourceFile, line: Int64?, column: Int64?, offset: Int64? = nil) {
+    init(file: SourceFile, line: Int?, column: Int?, offset: Int? = nil) {
         self.file = file
         self.line = line
         self.column = column

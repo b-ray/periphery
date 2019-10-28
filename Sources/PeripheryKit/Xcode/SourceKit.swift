@@ -36,6 +36,9 @@ final class SourceKit {
 
         do {
             response = try Request.index(file: file.path.string, arguments: arguments).send()
+            print(file)
+            print("!!!!")
+            print(response)
         } catch {
             throw PeripheryKitError.sourceKitRequestFailed(type: "index", file: file.path.string, error: error)
         }
