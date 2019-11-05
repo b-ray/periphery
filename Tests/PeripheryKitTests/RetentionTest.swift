@@ -181,7 +181,7 @@ class RetentionTest: XCTestCase {
         analyze()
 
         // Retained because it's a method from an external declaration (in this case, Equatable)
-        XCTAssertReferenced((.functionMethodStatic, "==(_:_:)"),
+        XCTAssertReferenced((.functionOperatorInfix, "==(_:_:)"),
                             descendentOf: (.class, "FixtureClass55"))
     }
 
@@ -626,7 +626,7 @@ class RetentionTest: XCTestCase {
         XCTAssertReferenced((.extensionProtocol, "FixtureProtocol96"))
         XCTAssertReferenced((.varInstance, "usedValue"),
                             descendentOf: (.protocol, "FixtureProtocol96"))
-        XCTAssertReferenced((.functionMethodStatic, "<(_:_:)"),
+        XCTAssertReferenced((.functionOperatorInfix, "<(_:_:)"),
                             descendentOf: (.extensionProtocol, "FixtureProtocol96"))
         XCTAssertNotReferenced((.varInstance, "unusedValue"),
                                descendentOf: (.protocol, "FixtureProtocol96"))
@@ -700,7 +700,7 @@ class RetentionTest: XCTestCase {
 
         let baseFunc1Param = get("param", "func1(param:)", "FixtureClass101Base")
         // Not used and not overriden.
-        XCTAssertFalse(baseFunc1Param!.isRetained)
+        XCTAssertFalse(baseFunc1Param?.isRetained ?? true)
 
         let baseFunc2Param = get("param", "func2(param:)", "FixtureClass101Base")
         // Nil because the param is used.
@@ -708,21 +708,21 @@ class RetentionTest: XCTestCase {
 
         let baseFunc3Param = get("param", "func3(param:)", "FixtureClass101Base")
         // Used in override.
-        XCTAssertTrue(baseFunc3Param!.isRetained)
+        XCTAssertTrue(baseFunc3Param?.isRetained ?? false)
 
         let baseFunc4Param = get("param", "func4(param:)", "FixtureClass101Base")
         // Used in override.
-        XCTAssertTrue(baseFunc4Param!.isRetained)
+        XCTAssertTrue(baseFunc4Param?.isRetained ?? false)
 
         let baseFunc5Param = get("param", "func5(param:)", "FixtureClass101Base")
         // Not used in any function.
-        XCTAssertFalse(baseFunc5Param!.isRetained)
+        XCTAssertFalse(baseFunc5Param?.isRetained ?? true)
 
         // - FixtureClass101Subclass1
 
         let sub1Func2Param = get("param", "func2(param:)", "FixtureClass101Subclass1")
         // Used in base.
-        XCTAssertTrue(sub1Func2Param!.isRetained)
+        XCTAssertTrue(sub1Func2Param?.isRetained ?? false)
 
         let sub1Func3Param = get("param", "func3(param:)", "FixtureClass101Subclass1")
         // Nil because the param is used.
@@ -736,29 +736,29 @@ class RetentionTest: XCTestCase {
 
         let sub2Func5Param = get("param", "func5(param:)", "FixtureClass101Subclass2")
         // Not used in any function.
-        XCTAssertFalse(sub2Func5Param!.isRetained)
+        XCTAssertFalse(sub2Func5Param?.isRetained ?? true)
 
         // - FixtureClass101InheritForeignBase
 
         let foreignBaseFuncParam = get("object", "isEqual(_:)", "FixtureClass101InheritForeignBase")
         // Overrides foreign function.
-        XCTAssertTrue(foreignBaseFuncParam!.isRetained)
+        XCTAssertTrue(foreignBaseFuncParam?.isRetained ?? false)
 
         // - FixtureClass101InheritForeignSubclass1
 
         let foreignSub1FuncParam = get("object", "isEqual(_:)", "FixtureClass101InheritForeignSubclass1")
         // Overrides foreign function.
-        XCTAssertTrue(foreignSub1FuncParam!.isRetained)
+        XCTAssertTrue(foreignSub1FuncParam?.isRetained ?? false)
     }
 
     func testRetainsForeignProtocolParameters() {
         analyze(retainPublic: true)
 
         let decoderParam = get("decoder", "init(from:)", "FixtureClass103")
-        XCTAssertTrue(decoderParam!.isRetained)
+        XCTAssertTrue(decoderParam?.isRetained ?? false)
 
         let encoderParam = get("encoder", "encode(to:)", "FixtureClass103")
-        XCTAssertTrue(encoderParam!.isRetained)
+        XCTAssertTrue(encoderParam?.isRetained ?? false)
     }
 
     func testRetainUnusedProtocolFuncParams() {
@@ -767,16 +767,16 @@ class RetentionTest: XCTestCase {
         analyze(retainPublic: true)
 
         let protoParam = get("param", "myFunc(param:)", "FixtureProtocol107")
-        XCTAssertTrue(protoParam!.isRetained)
+        XCTAssertTrue(protoParam?.isRetained ?? false)
 
         let protoExtParam = get("param", "myFunc(param:)", "FixtureProtocol107", .extensionProtocol)
-        XCTAssertTrue(protoExtParam!.isRetained)
+        XCTAssertTrue(protoExtParam?.isRetained ?? false)
 
         let class1Param = get("param", "myFunc(param:)", "FixtureClass107Class1")
-        XCTAssertTrue(class1Param!.isRetained)
+        XCTAssertTrue(class1Param?.isRetained ?? false)
 
         let class2Param = get("param", "myFunc(param:)", "FixtureClass107Class2")
-        XCTAssertTrue(class2Param!.isRetained)
+        XCTAssertTrue(class2Param?.isRetained ?? false)
     }
 
     func testIgnoreUnusedParamInUnusedFunction() {
@@ -794,11 +794,7 @@ class RetentionTest: XCTestCase {
         XCTAssertReferenced((.functionMethodInstance, "nested2()"))
     }
 
-    // MARK: - Known Failures
-
     func testProtocolConformingMembersAreRetained() {
-        guard performKnownFailures else { return }
-
         analyze(retainPublic: true)
 
         XCTAssertReferenced((.class, "FixtureClass27"))
@@ -823,6 +819,8 @@ class RetentionTest: XCTestCase {
                             descendentOf: (.class, "FixtureClass28"))
     }
 
+    // MARK: - Known Failures
+
     func testRetainsProtocolParameters() {
         guard performKnownFailures else { return }
 
@@ -832,31 +830,31 @@ class RetentionTest: XCTestCase {
 
         let protoFunc1Param1 = get("param1", "func1(param1:param2:)", "FixtureProtocol104")
         // Used in a conformance.
-        XCTAssertTrue(protoFunc1Param1!.isRetained)
+        XCTAssertTrue(protoFunc1Param1?.isRetained ?? false)
 
         let protoFunc1Param2 = get("param2", "func1(param1:param2:)", "FixtureProtocol104")
         // Not used in any conformance.
-        XCTAssertFalse(protoFunc1Param2!.isRetained)
+        XCTAssertFalse(protoFunc1Param2?.isRetained ?? true)
 
         let protoFunc2Param = get("param", "func2(param:)", "FixtureProtocol104")
         // Not used in any conformance.
-        XCTAssertFalse(protoFunc2Param!.isRetained)
+        XCTAssertFalse(protoFunc2Param?.isRetained ?? true)
 
         let protoFunc3Param = get("param", "func3(param:)", "FixtureProtocol104")
         // Used in the extension.
-        XCTAssertTrue(protoFunc3Param!.isRetained)
+        XCTAssertTrue(protoFunc3Param?.isRetained ?? false)
 
         let protoFunc4Param = get("param", "func4(param:)", "FixtureProtocol104")
         // Unused in extension, but used in conformance.
-        XCTAssertTrue(protoFunc4Param!.isRetained)
+        XCTAssertTrue(protoFunc4Param?.isRetained ?? false)
 
         let protoFunc5Param = get("param", "func5(param:)", "FixtureProtocol104")
         // Used in a conformance.
-        XCTAssertTrue(protoFunc5Param!.isRetained)
+        XCTAssertTrue(protoFunc5Param?.isRetained ?? false)
 
         let protoFunc6Param = get("param", "func6(param:)", "FixtureProtocol104")
         // Used in a override.
-        XCTAssertTrue(protoFunc6Param!.isRetained)
+        XCTAssertTrue(protoFunc6Param?.isRetained ?? false)
 
         // - FixtureProtocol104 (extension)
 
@@ -866,21 +864,21 @@ class RetentionTest: XCTestCase {
 
         let protoExtFunc4Param = get("param", "func4(param:)", "FixtureProtocol104", .extensionProtocol)
         // Used in a conformance by another class.
-        XCTAssertTrue(protoExtFunc4Param!.isRetained)
+        XCTAssertTrue(protoExtFunc4Param?.isRetained ?? false)
 
         // - FixtureClass104Class1
 
         let class1Func1Param1 = get("param1", "func1(param1:param2:)", "FixtureClass104Class1")
         // Used in a conformance by another class.
-        XCTAssertTrue(class1Func1Param1!.isRetained)
+        XCTAssertTrue(class1Func1Param1?.isRetained ?? false)
 
         let class1Func1Param2 = get("param2", "func1(param1:param2:)", "FixtureClass104Class1")
         // Not used in any conformance.
-        XCTAssertFalse(class1Func1Param2!.isRetained)
+        XCTAssertFalse(class1Func1Param2?.isRetained ?? true)
 
         let class1Func2Param = get("param", "func2(param:)", "FixtureClass104Class1")
         // Not used in any conformance.
-        XCTAssertFalse(class1Func2Param!.isRetained)
+        XCTAssertFalse(class1Func2Param?.isRetained ?? true)
 
         let class1Func5Param = get("param", "func5(param:)", "FixtureClass104Class1")
         // Nil because the param is used.
@@ -888,7 +886,7 @@ class RetentionTest: XCTestCase {
 
         let class1Func6Param = get("param", "func6(param:)", "FixtureClass104Class1")
         // Used in a override.
-        XCTAssertTrue(class1Func6Param!.isRetained)
+        XCTAssertTrue(class1Func6Param?.isRetained ?? false)
 
         let class1Func7Param = get("_", "func7(_:)", "FixtureClass104Class1")
         // Nil because the param is explicitly ignored.
@@ -902,11 +900,11 @@ class RetentionTest: XCTestCase {
 
         let class2Func1Param2 = get("param2", "func1(param1:param2:)", "FixtureClass104Class2")
         // Not used in any conformance.
-        XCTAssertFalse(class2Func1Param2!.isRetained)
+        XCTAssertFalse(class2Func1Param2?.isRetained ?? true)
 
         let class2Func2Param = get("param", "func2(param:)", "FixtureClass104Class2")
         // Not used in any conformance.
-        XCTAssertFalse(class2Func2Param!.isRetained)
+        XCTAssertFalse(class2Func2Param?.isRetained ?? true)
 
         let class2Func4Param = get("param", "func4(param:)", "FixtureClass104Class2")
         // Nil because the param is used.
@@ -918,7 +916,7 @@ class RetentionTest: XCTestCase {
 
         let class2Func6Param = get("param", "func6(param:)", "FixtureClass104Class2")
         // Used in a override.
-        XCTAssertTrue(class2Func6Param!.isRetained)
+        XCTAssertTrue(class2Func6Param?.isRetained ?? false)
 
         let class2Func7Param = get("_", "func7(_:)", "FixtureClass104Class2")
         // Nil because the param is explicitly ignored.
@@ -965,7 +963,7 @@ class RetentionTest: XCTestCase {
 
         let protoFunc7Param = get("param", "func7(_:)", "FixtureProtocol104")
         // Not used in any conformance.
-        XCTAssertFalse(protoFunc7Param!.isRetained)
+        XCTAssertFalse(protoFunc7Param?.isRetained ?? true)
     }
 
     // TODO: Need a way to handle this now that we're using the SPM.

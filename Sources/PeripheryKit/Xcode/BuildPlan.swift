@@ -48,7 +48,7 @@ final class BuildPlan {
             throw PeripheryKitError.noSwiftcInvocation(target: target.name)
         }
 
-        let filteredArguments: [BuildArgument]
+        var filteredArguments: [BuildArgument]
 
         if xcodebuildVersion.isVersion(lessThan: "10.0") {
             filteredArguments = invocation.arguments
@@ -56,6 +56,9 @@ final class BuildPlan {
         } else {
             filteredArguments = invocation.arguments
         }
+
+        filteredArguments = invocation.arguments
+            .filter { !$0.key.hasSuffix(".SwiftFileList") }
 
         let arguments = filteredArguments
             .flatMap { [$0.key, $0.value] }

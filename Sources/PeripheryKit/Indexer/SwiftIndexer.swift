@@ -226,10 +226,27 @@ final class SwiftIndexer: TypeIndexer {
 
     private func build(kind: Declaration.Kind, entity: [String: Any], structures: [[String: Any]]?, file: SourceFile) throws -> (declaration: Declaration, substructures: [[String: Any]]) {
         guard let usr = entity[SourceKit.Key.usr.rawValue] as? String,
-            let line = entity[SourceKit.Key.line.rawValue] as? Int,
-            let column = entity[SourceKit.Key.column.rawValue] as? Int else {
+            let rawLine = entity[SourceKit.Key.line.rawValue],
+            let rawColumn = entity[SourceKit.Key.column.rawValue] else {
                 throw PeripheryKitError.swiftIndexingError(message: "Failed to parse declaration entity: \(entity)")
         }
+
+        var line_: Int?
+        var column_: Int?
+
+        if let rawLine = rawLine as? Int64 {
+            line_ = Int(rawLine)
+        } else if let rawLine = rawLine as? Int {
+            line_ = rawLine
+        }
+
+        if let rawColumn = rawColumn as? Int64 {
+            column_ = Int(rawColumn)
+        } else if let rawColumn = rawColumn as? Int {
+            column_ = rawColumn
+        }
+
+        guard let line = line_, let column = column_ else { throw PeripheryKitError.swiftIndexingError(message: "Failed to parse declaration entity: \(entity)") }
 
         let location = SourceLocation(file: file, line: line, column: column)
         let declaration = Declaration(kind: kind, usr: usr, location: location)
